@@ -1,0 +1,19 @@
+# .dockerignore
+# Exclude strict raw data (keep the code and models!)
+ml-32m-split/train_ratings.csv
+ml-32m-split/test_ratings.csv
+ml-32m/
+data_enrichment/tmdb_cache/
+
+# Exclude Environments
+venv/
+.env
+__pycache__/
+.git/
+.github/
+.pytest_cache/
+
+# Exclude Temp
+temp/
+debug_output.txt
+*.log

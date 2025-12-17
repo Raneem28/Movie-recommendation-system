@@ -1,0 +1,5 @@
+Linear Regression V2 (Features: ['cast_rating_potential', 'year'])
+Coefficients: [1.34386210e+00 1.12592613e-04]
+Intercept:    -1.3050
+MSE:          0.7595
+R2 Score:     0.0060

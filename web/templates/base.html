@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovRec - Cute AI Hub</title>
+    <!-- Google Fonts: Quicksand & Indie Flower (for polaroids) -->
+    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&family=Quicksand:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍿</text></svg>">
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar container">
+        <a href="{{ url_for('index') }}" class="navbar-brand">🍿 MovRec</a>
+        <div class="navbar-nav">
+            <a href="{{ url_for('index') }}">Home</a>
+            <a href="{{ url_for('predict') }}">Predictor</a>
+            <a href="{{ url_for('recommend') }}">Recommender</a>
+            <a href="{{ url_for('insights') }}">Insights</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Flash Messages Overlay -->
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        Made by Raneem <span class="heart">♥</span>
+    </footer>
+
+    <!-- Simple Tab Script -->
+    <script>
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].classList.remove("active");
+            }
+            tablinks = document.getElementsByClassName("tab-btn");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.className += " active";
+        }
+
+        // Auto-open first tab if present
+        document.addEventListener("DOMContentLoaded", function () {
+            if (document.getElementsByClassName("tab-btn").length > 0) {
+                // Check if we want to stay on a tab (optional, for now just default)
+                document.getElementsByClassName("tab-btn")[0].click();
+            }
+        });
+    </script>
+</body>
+
+</html>

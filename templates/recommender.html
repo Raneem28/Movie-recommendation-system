@@ -1,0 +1,237 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div class="hero" style="padding: 2rem 0;">
+        <h1>🎬 Smart Recommender</h1>
+        <p class="lead" style="margin-bottom: 0;">Discover your next favorite movie.</p>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem;">
+        <button onclick="setMode('movie')" id="btnMovie" class="btn active-mode">Movie Match</button>
+        <button onclick="setMode('actor')" id="btnActor" class="btn btn-outline">Actor Search</button>
+    </div>
+
+    <!-- Search Box -->
+    <div class="card fade-in">
+        <form onsubmit="event.preventDefault(); handleSearch();" style="display: flex; gap: 1rem;">
+            <input type="text" id="queryInput" placeholder="Enter a movie title (e.g. Inception)..."
+                style="flex-grow: 1;">
+            <button type="submit" class="btn">Search</button>
+        </form>
+        <p id="searchHint" style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">
+            Finds users who watched similar movies.
+        </p>
+    </div>
+
+    <!-- Candidates Area (Disambiguation) -->
+    <div id="candidatesArea" class="fade-in" style="display: none; margin-top: 2rem;">
+        <h3 style="margin-bottom: 1rem;">Select a Movie:</h3>
+        <div id="candidatesGrid"
+            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+            <!-- Candidates injected here -->
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsArea"
+        style="margin-top: 2rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem;">
+        <!-- Cards injected here -->
+    </div>
+</div>
+
+<style>
+    .active-mode {
+        background: var(--text-main);
+        color: var(--bg-dark);
+        border-color: var(--text-main);
+    }
+
+    .candidate-card {
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .candidate-card:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+        border-color: var(--primary);
+    }
+
+    .source-tag {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 0.2rem;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+
+    .db-local {
+        background: #10b981;
+        color: #000;
+    }
+
+    .db-tmdb {
+        background: #3b82f6;
+        color: #fff;
+    }
+</style>
+
+<script>
+    let currentMode = 'movie';
+
+    function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('btnMovie').className = mode === 'movie' ? 'btn active-mode' : 'btn btn-outline';
+        document.getElementById('btnActor').className = mode === 'actor' ? 'btn active-mode' : 'btn btn-outline';
+
+        const input = document.getElementById('queryInput');
+        const hint = document.getElementById('searchHint');
+
+        // Hide candidates if switching modes
+        document.getElementById('candidatesArea').style.display = 'none';
+        document.getElementById('resultsArea').innerHTML = '';
+
+        if (mode === 'movie') {
+            input.placeholder = "Enter a movie title (e.g. Inception)...";
+            hint.innerText = "Finds users who watched similar movies.";
+        } else {
+            input.placeholder = "Enter an actor name (e.g. Shah Rukh Khan)...";
+            hint.innerText = "Finds top rated movies by this actor.";
+        }
+    }
+
+    async function handleSearch() {
+        if (currentMode === 'actor') {
+            getRecs(null); // Direct search for actor
+        } else {
+            searchCandidates(); // Step 1: Find candidates
+        }
+    }
+
+    async function searchCandidates() {
+        const query = document.getElementById('queryInput').value;
+        if (!query) return;
+
+        const resDiv = document.getElementById('resultsArea');
+        resDiv.innerHTML = ''; // Clear results
+        const candDiv = document.getElementById('candidatesArea');
+        const candGrid = document.getElementById('candidatesGrid');
+
+        candDiv.style.display = 'block';
+        candGrid.innerHTML = '<p style="grid-column: 1/-1;">Seeeking candidates...</p>';
+
+        try {
+            const res = await fetch('/search/candidates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: query, type: 'movie' })
+            });
+            const data = await res.json();
+
+            candGrid.innerHTML = '';
+
+            if (!data.candidates || data.candidates.length === 0) {
+                candGrid.innerHTML = '<p>No matches found.</p>';
+                return;
+            }
+
+            data.candidates.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'candidate-card';
+                div.onclick = () => getRecs(c); // Step 2: Select
+
+                const badgeClass = c.source === 'LOCAL' ? 'db-local' : 'db-tmdb';
+
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <span class="source-tag ${badgeClass}">${c.source}</span>
+                        <span style="font-size: 0.9rem; color: var(--text-muted);">${c.year || 'N/A'}</span>
+                    </div>
+                    <h4 style="margin: 0.5rem 0 0; font-size: 1rem;">${c.title}</h4>
+                `;
+                candGrid.appendChild(div);
+            });
+
+        } catch (e) {
+            console.error(e);
+            candGrid.innerHTML = '<p style="color: var(--accent);">Error searching candidates.</p>';
+        }
+    }
+
+    async function getRecs(selection) {
+        const query = document.getElementById('queryInput').value;
+        const div = document.getElementById('resultsArea');
+
+        // Hide candidates once selected
+        document.getElementById('candidatesArea').style.display = 'none';
+
+        div.innerHTML = '<p class="fade-in" style="grid-column: 1/-1; text-align: center;">Fetching recommendations...</p>';
+
+        const payload = {
+            query: query,
+            type: currentMode,
+            selection: selection // Can be null for actor mode
+        };
+
+        try {
+            const res = await fetch('/recommend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            div.innerHTML = '';
+
+            if (!data.results || data.results.length === 0) {
+                div.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 2rem; background: rgba(255,255,255,0.05); border-radius: 1rem;">
+                        <h3>No results found</h3>
+                        <p style="color: var(--text-muted);">${data.note || "Try a different search term or movie."}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Display Results
+            data.results.forEach((item, index) => {
+                // Determine display data
+                let title = item.title || "Unknown";
+                let rating = item.avg_rating || 0.0;
+
+                // Extra match info if available?
+                let extra = "";
+                // if (item.similarity) extra = ...
+
+                const card = document.createElement('div');
+                card.className = `card fade-in delay-${Math.min(index + 1, 3)}`;
+                card.style.padding = '1.5rem';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.justifyContent = 'space-between';
+
+                // Colorize rating
+                let ratingColor = rating >= 7.0 ? '#10b981' : (rating >= 5.0 ? '#fbbf24' : '#ef4444');
+
+                card.innerHTML = `
+                    <h4 style="margin-bottom: 0.5rem; font-size: 1.1rem;">${title}</h4>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 1rem;">
+                        <span style="color: ${ratingColor}; font-weight: bold;">★ ${parseFloat(rating).toFixed(1)}</span>
+                    </div>
+                `;
+                div.appendChild(card);
+            });
+
+        } catch (e) {
+            console.error(e);
+            div.innerHTML = '<p style="color: #ef4444; grid-column: 1/-1; text-align: center;">Error fetching recommendations.</p>';
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>🔮 Movie Success Predictor</h2>
+        <p>Will it be a Blockbuster or a Flop? Let's find out!</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'SearchMode')">Search Movie</button>
+        <button class="tab-btn" onclick="openTab(event, 'ManualMode')">Manual Entry</button>
+    </div>
+
+    <!-- Search Mode Tab -->
+    <div id="SearchMode" class="tab-content" style="display: block;">
+        <div class="form-group">
+            <label>Movie Title to Search</label>
+            <input type="text" id="searchInput" class="form-control" placeholder="e.g. Avatar"
+                onkeypress="handleEnter(event)">
+            <small style="color: #888; margin-top: 5px; display: block;">We'll fetch the year, cast, and details for
+                you!</small>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="performSearch()">🔍 Find Movie</button>
+
+        <!-- Search Results Modal/List -->
+        <div id="searchResults" style="display: none; margin-top: 20px;">
+            <h4 style="color: var(--hot-pink);">Which one did you mean?</h4>
+            <div id="resultsList" class="gallery-grid"
+                style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                <!-- Filled by JS -->
+            </div>
+            <button class="btn btn-secondary" onclick="document.getElementById('searchResults').style.display='none'"
+                style="margin-top: 10px; width: 100%;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Manual Mode Tab (Hidden fields populated by Search) -->
+    <div id="ManualMode" class="tab-content">
+        <form id="predictForm" method="POST" action="{{ url_for('predict') }}">
+            <input type="hidden" name="mode" value="manual">
+            <div class="form-group">
+                <label>Movie Title</label>
+                <input type="text" id="title" name="title" class="form-control" placeholder="e.g. My Cute Movie"
+                    value="{{ form_data.get('title', '') }}" required>
+            </div>
+
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Release Year</label>
+                    <input type="number" id="year" name="year" class="form-control"
+                        value="{{ form_data.get('year', 2025) }}" required>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Runtime (mins)</label>
+                    <input type="number" id="runtime" name="runtime" class="form-control"
+                        value="{{ form_data.get('runtime', 120) }}" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Cast (Comma separated)</label>
+                <input type="text" id="cast" name="cast" class="form-control" placeholder="Tom Cruise, Zendaya..."
+                    value="{{ form_data.get('cast') if form_data.get('cast') is string else form_data.get('cast', [])|join(', ') }}"
+                    required>
+            </div>
+
+            <div class="form-group">
+                <label>Average Rating (Optional Override)</label>
+                <input type="number" step="0.1" min="0" max="10" id="user_rating" name="user_rating"
+                    class="form-control" placeholder="Leave empty to auto-predict"
+                    value="{{ form_data.get('user_rating', '') }}">
+                <small style="color: #888;">Enter a value (e.g., 5.0) to test "What if it gets this rating?".</small>
+            </div>
+
+            <div class="form-group">
+                <label>Select Genres</label>
+                <select id="genres" name="genres" class="form-control" multiple style="height: 150px;">
+                    {% set selected_genres = form_data.get('genres', []) %}
+                    <option value="Action" {% if 'Action' in selected_genres %}selected{% endif %}>Action</option>
+                    <option value="Adventure" {% if 'Adventure' in selected_genres %}selected{% endif %}>Adventure
+                    </option>
+                    <option value="Animation" {% if 'Animation' in selected_genres %}selected{% endif %}>Animation
+                    </option>
+                    <option value="Comedy" {% if 'Comedy' in selected_genres %}selected{% endif %}>Comedy</option>
+                    <option value="Crime" {% if 'Crime' in selected_genres %}selected{% endif %}>Crime</option>
+                    <option value="Documentary" {% if 'Documentary' in selected_genres %}selected{% endif %}>Documentary
+                    </option>
+                    <option value="Drama" {% if 'Drama' in selected_genres %}selected{% endif %}>Drama</option>
+                    <option value="Family" {% if 'Family' in selected_genres %}selected{% endif %}>Family</option>
+                    <option value="Fantasy" {% if 'Fantasy' in selected_genres %}selected{% endif %}>Fantasy</option>
+                    <option value="Horror" {% if 'Horror' in selected_genres %}selected{% endif %}>Horror</option>
+                    <option value="Music" {% if 'Music' in selected_genres %}selected{% endif %}>Music</option>
+                    <option value="Mystery" {% if 'Mystery' in selected_genres %}selected{% endif %}>Mystery</option>
+                    <option value="Romance" {% if 'Romance' in selected_genres %}selected{% endif %}>Romance</option>
+                    <option value="Sci-Fi" {% if 'Sci-Fi' in selected_genres %}selected{% endif %}>Sci-Fi</option>
+                    <option value="Thriller" {% if 'Thriller' in selected_genres %}selected{% endif %}>Thriller</option>
+                    <option value="War" {% if 'War' in selected_genres %}selected{% endif %}>War</option>
+                    <option value="Western" {% if 'Western' in selected_genres %}selected{% endif %}>Western</option>
+                </select>
+                <small style="color: #999;">Hold Ctrl (Windows) or Cmd (Mac) to select multiple</small>
+            </div>
+
+            <!-- Hidden field for Rating fallback/override if we had it, but API computes it -->
+
+            <button type="submit" class="btn btn-primary">✨ Predict Success</button>
+        </form>
+    </div>
+</div>
+
+{% if prediction %}
+<!-- Same Result Box -->
+<div class="result-box {% if prediction.class == 'Hit' %}result-hit{% else %}result-flop{% endif %}">
+    <h3 style="margin: 0; font-size: 1.5rem; opacity: 0.9;">Prediction Result</h3>
+    <h2 style="font-size: 4rem; margin: 10px 0; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;">
+        {{ prediction.class }}!
+    </h2>
+
+    <div class="confidence-bar">
+        <div class="confidence-fill" style="width: {{ prediction.confidence }};"></div>
+    </div>
+    <p style="font-size: 1.2rem;">Confidence: <strong>{{ prediction.confidence }}</strong></p>
+
+    {% if prediction.rating %}
+    <div
+        style="background: rgba(255,255,255,0.25); padding: 15px 30px; border-radius: 20px; margin-top: 20px; display: inline-block; backdrop-filter: blur(5px);">
+        <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Predicted
+            Rating</div>
+        <div style="font-size: 2.5rem; font-weight: 700;">⭐ {{ prediction.rating }} <span
+                style="font-size: 1rem; opacity: 0.7;">/ 5.0</span></div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+    // Get API URL from template or default (passed from Flask ideally, or assume standard port)
+    // Using simple fetch logic
+    const API_BASE = "http://127.0.0.1:8000";
+
+    function handleEnter(e) {
+        if (e.key === 'Enter') performSearch();
+    }
+
+    async function performSearch() {
+        const query = document.getElementById('searchInput').value;
+        if (!query) return;
+
+        const btn = document.querySelector('#SearchMode button');
+        btn.innerHTML = "⏳ Searching...";
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch(`${API_BASE}/movies/search/${encodeURIComponent(query)}`);
+            const data = await resp.json();
+
+            const resultsDiv = document.getElementById('searchResults');
+            const listDiv = document.getElementById('resultsList');
+            listDiv.innerHTML = '';
+
+            if (data.results && data.results.length > 0) {
+                data.results.forEach(movie => {
+                    const div = document.createElement('div');
+                    div.className = 'polaroid'; // Re-use polaroid style for cards
+                    div.style.padding = '10px';
+                    div.style.cursor = 'pointer';
+                    div.style.height = 'auto';
+                    div.style.transform = 'none'; // reset rotation
+                    div.style.textAlign = 'left';
+
+                    div.innerHTML = `
+                        <div style="font-weight:bold; color: var(--text-color);">${movie.title}</div>
+                        <div style="font-size: 0.9rem; color: #666;">${movie.year || 'N/A'}</div>
+                        <div style="font-size: 0.8rem; color: var(--purple);">Source: ${movie.source}</div>
+                        ${movie.rating ? `<div style="font-size:0.8rem">⭐ ${movie.rating.toFixed(1)}</div>` : ''}
+                   `;
+                    div.onclick = () => selectMovie(movie.title);
+                    listDiv.appendChild(div);
+                });
+                resultsDiv.style.display = 'block';
+            } else {
+                alert("No movies found! Try Manual Entry.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error searching database. Make sure Backend API is running!");
+        } finally {
+            btn.innerHTML = "🔍 Find Movie";
+            btn.disabled = false;
+        }
+    }
+
+    async function selectMovie(title) {
+        // Hide list
+        document.getElementById('searchResults').style.display = 'none';
+
+        // Switch to Manual tab to show fields filling
+        document.querySelector('[onclick="openTab(event, \'ManualMode\')"]').click();
+
+        // Fetch details
+        try {
+            const resp = await fetch(`${API_BASE}/movies/lookup/${encodeURIComponent(title)}`);
+            const details = await resp.json();
+
+            // Fill Form
+            document.getElementById('title').value = details.title;
+            document.getElementById('year').value = details.year;
+            document.getElementById('runtime').value = details.runtime;
+            document.getElementById('cast').value = details.cast.join(', ');
+
+            // Select Genres
+            const select = document.getElementById('genres');
+            Array.from(select.options).forEach(opt => opt.selected = false);
+            details.genres.forEach(g => {
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value === g) select.options[i].selected = true;
+                }
+            });
+
+            // Auto-submit or let user verify? 
+            // Let's scroll to submit button to encourage user to click
+            document.querySelector('#predictForm button').scrollIntoView({ behavior: 'smooth' });
+
+        } catch (e) {
+            alert("Error fetching movie details.");
+        }
+    }
+</script>
+{% endblock %}

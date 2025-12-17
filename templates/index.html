@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="hero fade-in">
+    <h1>Welcome to <span>MovieAI</span></h1>
+    <p class="lead">Harness the power of Machine Learning to predict box office hits, discover new favorites, and
+        explore movie data.</p>
+
+    <div class="grid-2" style="max-width: 800px; margin: 0 auto;">
+        <a href="/classifier" class="card" style="text-decoration: none; display: block; text-align: left;">
+            <h2>🚀 Hit Predictor</h2>
+            <p style="color: var(--text-muted);">Will it be a Blockbuster or a Flop? AI analysis based on cast, genre,
+                and more.</p>
+        </a>
+
+        <a href="/recommender" class="card" style="text-decoration: none; display: block; text-align: left;">
+            <h2>🎬 Recommender</h2>
+            <p style="color: var(--text-muted);">Find your next favorite movie using our advanced collaborative
+                filtering engine.</p>
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,6 @@
+Linear Regression Results (Feature: cast_rating_potential)
+Coefficient: 1.3435
+Intercept:   -1.0791
+MSE:         0.7594
+Target Var:  0.7641
+R2 Score:    0.0062

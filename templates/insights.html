@@ -1,0 +1,257 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="hero" style="text-align: center; margin-bottom: 3rem;">
+    <h1>📊 Model Insights</h1>
+    <p class="lead">Visualizing the patterns behind the predictions.</p>
+</div>
+
+<div class="insights-grid">
+    <!-- 1. Feature Importance -->
+    <div class="card fade-in delay-1 postcard">
+        <div class="pin"></div>
+        <h3 style="margin-bottom: 1rem;">Feature Importance</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+            Which factors matter most? Release Year and Cast Size drive Hit/Flop predictions more than Runtime.
+        </p>
+        <div class="img-container" onclick="openModal(this.querySelector('img').src)">
+            <img src="static/images/feature_importance2.png" alt="Feature Importance"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+            <div style="display:none; padding: 2rem; text-align: center; color: var(--text-muted);">Image Loading...
+            </div>
+            <div class="zoom-hint">🔍 Click to Zoom</div>
+        </div>
+    </div>
+
+    <!-- 2. Clusters -->
+    <div class="card fade-in delay-2 postcard">
+        <div class="pin"></div>
+        <h3 style="margin-bottom: 1rem;">Movie Clusters</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+            AI groups movies by "feel". Blue dots are Drama, Green are Action, showing how genres naturally separate.
+        </p>
+        <div class="img-container" onclick="openModal(this.querySelector('img').src)">
+            <img src="/static/images/clusters2.png" alt="Movie Clusters"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+            <div style="display:none; padding: 2rem; text-align: center; color: var(--text-muted);">Image Loading...
+            </div>
+            <div class="zoom-hint">🔍 Click to Zoom</div>
+        </div>
+    </div>
+
+    <!-- 3. Classification Results -->
+    <div class="card fade-in delay-3 postcard">
+        <div class="pin"></div>
+        <h3 style="margin-bottom: 1rem;">Prediction Accuracy</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+            Confusion Matrix showing how often the AI correctly guesses "Hit" vs "Flop". High diagonal numbers are good!
+        </p>
+        <div class="img-container" onclick="openModal(this.querySelector('img').src)">
+            <img src="/static/images/classification_results.png" alt="Classification Confusion Matrix"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+            <div style="display:none; padding: 2rem; text-align: center; color: var(--text-muted);">Image Loading...
+            </div>
+            <div class="zoom-hint">🔍 Click to Zoom</div>
+        </div>
+    </div>
+
+    <!-- 4. Embeddings -->
+    <div class="card fade-in delay-4 postcard">
+        <div class="pin"></div>
+        <h3 style="margin-bottom: 1rem;">Deep Learning Embeddings</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+            A 2D map of 80,000 movies. Close dots mean strictly similar movies, learned purely from user watch history.
+        </p>
+        <div class="img-container" onclick="openModal(this.querySelector('img').src)">
+            <img src="/static/images/movie_embeddings_dr2.png" alt="Embeddings"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+            <div style="display:none; padding: 2rem; text-align: center; color: var(--text-muted);">Image Loading...
+            </div>
+            <div class="zoom-hint">🔍 Click to Zoom</div>
+        </div>
+    </div>
+
+    <!-- 5. Time Series (New) -->
+    <div class="card fade-in delay-5 postcard">
+        <div class="pin"></div>
+        <h3 style="margin-bottom: 1rem;">Movie Releases Over Time</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+            A look at how the number of movie releases has exploded over the decades.
+        </p>
+        <div class="img-container" onclick="openModal(this.querySelector('img').src)">
+            <img src="/static/images/time_series_enriched.png" alt="Time Series"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+            <div style="display:none; padding: 2rem; text-align: center; color: var(--text-muted);">Image Loading...
+            </div>
+            <div class="zoom-hint">🔍 Click to Zoom</div>
+        </div>
+    </div>
+</div>
+
+<!-- Lightbox Modal -->
+<div id="imageModal" class="modal" onclick="closeModal()">
+    <span class="close">&times;</span>
+    <img class="modal-content" id="modalImg">
+</div>
+
+<style>
+    /* Postcard Grid */
+    .insights-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 3rem;
+        padding: 1rem;
+    }
+
+    /* Postcard Styling */
+    .card.postcard {
+        background: #fff;
+        padding: 1.5rem 1.5rem 3rem 1.5rem;
+        /* Extra bottom padding for Polaroid feel */
+        border-radius: 0.5rem;
+        /* Sharp corners like photos/cards */
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        transform: rotate(-1deg);
+        position: relative;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    /* Random Rotation for "scattered on table" look - using nth-child */
+    .card.postcard:nth-child(even) {
+        transform: rotate(1deg);
+    }
+
+    .card.postcard:nth-child(3n) {
+        transform: rotate(-2deg);
+    }
+
+    .card.postcard:hover {
+        transform: scale(1.05) rotate(0deg) !important;
+        z-index: 10;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    /* "Pin" effect */
+    .pin {
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 20px;
+        height: 20px;
+        background: radial-gradient(circle at 30% 30%, #fecdd3, #e11d48);
+        border-radius: 50%;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        z-index: 5;
+    }
+
+    /* Image Container */
+    .img-container {
+        background: #f8fafc;
+        border-radius: 0.25rem;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        cursor: zoom-in;
+        position: relative;
+    }
+
+    .img-container img {
+        width: 100%;
+        height: auto;
+        display: block;
+        transition: transform 0.5s;
+    }
+
+    .zoom-hint {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        color: #64748b;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .img-container:hover .zoom-hint {
+        opacity: 1;
+    }
+
+    /* Modal (Lightbox) */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        padding-top: 50px;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(255, 255, 255, 0.9);
+        /* White frosted glass */
+        backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 900px;
+        border-radius: 1rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        animation: zoomIn 0.3s;
+    }
+
+    @keyframes zoomIn {
+        from {
+            transform: scale(0)
+        }
+
+        to {
+            transform: scale(1)
+        }
+    }
+
+    .close {
+        position: absolute;
+        top: 20px;
+        right: 35px;
+        color: #94a3b8;
+        font-size: 40px;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: #f472b6;
+        text-decoration: none;
+        cursor: pointer;
+    }
+</style>
+
+<script>
+    function openModal(src) {
+        var modal = document.getElementById("imageModal");
+        var modalImg = document.getElementById("modalImg");
+        modal.style.display = "block";
+        modalImg.src = src;
+    }
+
+    function closeModal() {
+        var modal = document.getElementById("imageModal");
+        modal.style.display = "none";
+    }
+
+    // Close on Escape key
+    document.addEventListener('keydown', function (event) {
+        if (event.key === "Escape") {
+            closeModal();
+        }
+    });
+</script>
+{% endblock %}

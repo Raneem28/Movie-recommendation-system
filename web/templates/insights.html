@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card-header" style="margin-bottom: 3rem;">
+    <h2>📊 Model Insights Gallery</h2>
+    <p>A peek into the brain of our AI models!</p>
+</div>
+
+<div class="gallery-grid">
+    {% for img in images %}
+    <div class="polaroid">
+        <a href="{{ url_for('static', filename='images/' + img.file) }}" target="_blank">
+            <img src="{{ url_for('static', filename='images/' + img.file) }}" alt="{{ img.file }}">
+        </a>
+        <div class="caption">{{ img.desc }}</div>
+    </div>
+    {% else %}
+    <div class="card" style="grid-column: 1/-1; text-align: center;">
+        <p>No insight images found in <code>web/static/images</code> yet! 📸</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

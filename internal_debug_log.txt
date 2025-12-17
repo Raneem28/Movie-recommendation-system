@@ -1,0 +1,42 @@
+DEBUG ANALYSIS REPORT
+=====================
+
+ACTOR SCORES:
+   Count: 52076
+   Shape of dict: [('Tom Hanks', 3.3686798299238374), ('Tim Allen', 3.1053572205481), ('Don Rickles', 3.3871367481505583), ('Jim Varney', 2.400759882081038), ('Wallace Shawn', 3.29932646216936)]
+
+'cast_rating_potential' STATISTICS:
+   Mean: 3.1541
+   Std : 0.5560
+   Min : 0.5000
+   Max : 5.0000
+   Rows == Global Avg (3.1586): 434 (1.64%)
+
+Correlation with Target (avg_rating): 0.8412
+
+SAMPLE ROWS (Feature vs Target):
+                                title  cast_rating_potential  avg_rating
+0                    Toy Story (1995)               3.112252    3.911956
+1                      Jumanji (1995)               2.902773    3.256479
+2             Grumpier Old Men (1995)               3.190826    3.115288
+3            Waiting to Exhale (1995)               2.833182    2.892157
+4  Father of the Bride Part II (1995)               3.016775    3.023148
+5                         Heat (1995)               3.115046    3.828191
+6                      Sabrina (1995)               3.159278    3.310219
+7                 Tom and Huck (1995)               3.131169    3.119565
+8                 Sudden Death (1995)               3.049645    3.049645
+9                    GoldenEye (1995)               3.011540    3.398687
+
+---------------------
+TEST SET ANALYSIS
+---------------------
+
+'cast_rating_potential' (TEST) STATISTICS:
+   Mean: 3.1967
+   Std : 0.3942
+   Rows == Global Avg: 362 (2.52%)
+
+Correlation with Target (TEST): 0.3083
+
+GENERALIZATION CHECK:
+   Test Movies with Scored Cast: 13983 / 14345 (97.48%)

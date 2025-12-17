@@ -1,0 +1,225 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div class="hero" style="padding: 2rem 0;">
+        <h1>🚀 Hit Predictor</h1>
+        <p class="lead" style="margin-bottom: 0;">Analyze movie potential with AI.</p>
+    </div>
+
+    <!-- Search / Autofill -->
+    <div class="card fade-in" style="margin-bottom: 2rem;">
+        <h3>🔍 Quick Fill</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Search for an existing movie to
+            pre-fill data.</p>
+        <div style="display: flex; gap: 1rem;">
+            <input type="text" id="movieSearch" placeholder="Search movie (e.g. Iron Man)..." style="flex-grow: 1;">
+            <button onclick="searchMovie()" class="btn">Search</button>
+        </div>
+        <div id="searchResults" style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem;"></div>
+    </div>
+
+    <!-- Main Form -->
+    <div class="card fade-in delay-1">
+        <form id="predictForm" onsubmit="event.preventDefault(); predictSuccess();">
+
+            <div class="grid-2">
+                <div>
+                    <label>Release Year</label>
+                    <input type="number" id="inputYear" value="2025" required style="width: 100%;">
+                </div>
+                <div>
+                    <label>Runtime (minutes)</label>
+                    <input type="number" id="inputRuntime" value="120" required style="width: 100%;">
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top: 1.5rem;">
+                <div>
+                    <label>Cast Size</label>
+                    <input type="number" id="inputCastSize" value="15" required style="width: 100%;">
+                </div>
+                <div>
+                    <label>Rating Count (Popularity)</label>
+                    <input type="number" id="inputCount" value="5000" required style="width: 100%;">
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem;">
+                <label>Expected Rating (0-5)</label>
+                <div style="display: flex; gap: 1rem;">
+                    <input type="number" id="inputRating" step="0.1" value="3.5" required style="flex-grow: 1;">
+                    <button type="button" onclick="guessRating()" class="btn btn-outline"
+                        style="white-space: nowrap;">🤖 AI Estimate</button>
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem;">
+                <label style="margin-bottom: 1rem;">Genres</label>
+                <div class="checkbox-group">
+                    {% for genre in all_genres %}
+                    <label class="checkbox-item">
+                        <input type="checkbox" name="genres" value="{{ genre }}"> {{ genre }}
+                    </label>
+                    {% else %}
+                    <label class="checkbox-item"><input type="checkbox" name="genres" value="Action"> Action</label>
+                    <label class="checkbox-item"><input type="checkbox" name="genres" value="Drama"> Drama</label>
+                    <label class="checkbox-item"><input type="checkbox" name="genres" value="Comedy"> Comedy</label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <button type="submit" class="btn" style="width: 100%; margin-top: 1rem; font-size: 1.2rem;">🔮 Predict Box
+                Office Status</button>
+        </form>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultBox" class="result-box fade-in" style="display: none;">
+        <h2 id="resTitle" class="result-title"></h2>
+        <p style="font-size: 1.25rem;">Confidence: <strong id="resConfidence" style="color: var(--primary);"></strong>
+        </p>
+        <div
+            style="margin-top: 1rem; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+            <div id="resBar" style="height: 100%; width: 0%; transition: width 1s ease;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function getGenres() {
+        return Array.from(document.querySelectorAll('input[name="genres"]:checked')).map(cb => cb.value);
+    }
+
+    async function searchMovie() {
+        const query = document.getElementById('movieSearch').value;
+        const btn = document.querySelector('button[onclick="searchMovie()"]');
+        const originalText = btn.innerText;
+        btn.innerText = "Wait...";
+
+        try {
+            const res = await fetch(`/movies/search/${encodeURIComponent(query)}`);
+            const data = await res.json();
+
+            const div = document.getElementById('searchResults');
+            div.innerHTML = '';
+
+            if (!data.length) {
+                div.innerHTML = '<span style="color: var(--secondary);">No movies found.</span>';
+                return;
+            }
+
+            data.forEach(m => {
+                const b = document.createElement('button');
+                b.className = 'btn btn-outline';
+                b.style.fontSize = '0.8rem';
+                b.style.padding = '0.5rem 1rem';
+                b.innerText = `${m.title} (${m.year || 'N/A'})`;
+                b.onclick = () => loadMovie(m.title, m.year);
+                div.appendChild(b);
+            });
+        } catch (e) { console.error(e); }
+        finally { btn.innerText = originalText; }
+    }
+
+    async function loadMovie(title, year) {
+        // Call lookup API
+        try {
+            // Logic to fetch full details
+            const res = await fetch(`/movies/lookup/${encodeURIComponent(title)}?year=${year || ''}`);
+            if (!res.ok) throw new Error("Not found");
+            const data = await res.json();
+
+            document.getElementById('inputYear').value = data.year;
+            document.getElementById('inputRuntime').value = data.runtime;
+            document.getElementById('inputRating').value = data.rating;
+            // set cast size if we have list, otherwise guess
+            const cSize = data.cast ? data.cast.length : 15;
+            document.getElementById('inputCastSize').value = cSize;
+
+            // set genres
+            const allCb = document.querySelectorAll('input[name="genres"]');
+            allCb.forEach(cb => cb.checked = false);
+            if (data.genres) {
+                data.genres.forEach(g => {
+                    // Fuzzy match genre
+                    allCb.forEach(cb => {
+                        if (g.includes(cb.value) || cb.value.includes(g)) cb.checked = true;
+                    });
+                });
+            }
+
+            // Highlight
+            document.querySelector('#predictForm').animate([
+                { borderColor: 'var(--primary)' },
+                { borderColor: 'var(--border)' }
+            ], { duration: 1000 });
+
+        } catch (e) {
+            alert("Could not load full details.");
+        }
+    }
+
+    async function guessRating() {
+        const data = {
+            title: "User Query",
+            year: parseInt(document.getElementById('inputYear').value),
+            runtime: parseInt(document.getElementById('inputRuntime').value),
+            genres: getGenres(),
+            cast: [], // Simplified
+            rating_count: parseInt(document.getElementById('inputCount').value)
+        };
+
+        const res = await fetch('/predict/rating', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const json = await res.json();
+        document.getElementById('inputRating').value = json.predicted_rating;
+    }
+
+    async function predictSuccess() {
+        const btn = document.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerText = "Analyzing...";
+
+        const data = {
+            title: "User Query",
+            year: parseInt(document.getElementById('inputYear').value),
+            runtime: parseInt(document.getElementById('inputRuntime').value),
+            genres: getGenres(),
+            cast: [], // empty cast list
+            cast_size: parseInt(document.getElementById('inputCastSize').value), // manual override
+            user_rating: parseFloat(document.getElementById('inputRating').value)
+        };
+
+        try {
+            const res = await fetch('/predict/hit-flop', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+
+            const box = document.getElementById('resultBox');
+            const title = document.getElementById('resTitle');
+            const conf = document.getElementById('resConfidence');
+            const bar = document.getElementById('resBar');
+
+            box.style.display = 'block';
+            title.innerText = json.prediction.toUpperCase();
+            title.className = 'result-title ' + (json.prediction === 'Hit' ? 'hit' : 'flop');
+            conf.innerText = json.confidence + '%';
+
+            // Animate bar
+            bar.style.width = '0%';
+            bar.style.background = json.prediction === 'Hit' ? '#10b981' : '#ef4444';
+            setTimeout(() => { bar.style.width = json.confidence + '%'; }, 100);
+
+            // Scroll to result
+            box.scrollIntoView({ behavior: 'smooth' });
+
+        } catch (e) { alert("Error predicting."); }
+        finally { btn.disabled = false; btn.innerText = "🔮 Predict Box Office Status"; }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,21 @@
+# .gitignore - Movie ML Project
+
+# --- Large Data & Models (>100MB) ---
+# Prevent GitHub reject/hang
+ml-32m-split/train_ratings.csv
+ml-32m-split/test_ratings.csv
+ml-32m/
+models/*.pkl
+models/*.h5
+
+# --- Environments & System ---
+venv/
+__pycache__/
+.env
+.DS_Store
+*.log
+.pytest_cache/
+
+# --- Temporary ---
+temp/
+debug_output.txt

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>🎬 Movie Recommender</h2>
+        <p>Find your next favorite movie or explore by actor!</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'SimilarMode')">If You Liked...</button>
+        <button class="tab-btn" onclick="openTab(event, 'ActorMode')">Star Search</button>
+    </div>
+
+    <!-- Similar Movie Mode -->
+    <div id="SimilarMode" class="tab-content" style="display: block;">
+        <form method="POST" action="{{ url_for('recommend') }}">
+            <input type="hidden" name="type" value="movie">
+            <div class="form-group">
+                <label>If you watched this movie...</label>
+                <input type="text" name="query" class="form-control" placeholder="e.g. Inception" required>
+            </div>
+            <button type="submit" class="btn btn-primary">🍿 Find Similar Movies</button>
+        </form>
+    </div>
+
+    <!-- Actor Mode -->
+    <div id="ActorMode" class="tab-content">
+        <form method="POST" action="{{ url_for('recommend') }}">
+            <input type="hidden" name="type" value="actor">
+            <div class="form-group">
+                <label>Search for an Actor</label>
+                <input type="text" name="query" class="form-control" placeholder="e.g. Leonardo DiCaprio" required>
+            </div>
+            <button type="submit" class="btn btn-primary">🌟 Show Top Movies</button>
+        </form>
+    </div>
+</div>
+
+{% if results %}
+<div style="margin-top: 3rem;">
+    {% if type == 'movie' %}
+    <h3 style="text-align: center; color: var(--hot-pink); margin-bottom: 2rem;">Because you watched <span
+            style="color: var(--text-color);">{{ query }}</span>, you might like:</h3>
+    {% else %}
+    <h3 style="text-align: center; color: var(--hot-pink); margin-bottom: 2rem;">Top Rated Movies by <span
+            style="color: var(--text-color);">{{ query }}</span>:</h3>
+    {% endif %}
+
+    <div class="gallery-grid">
+        {% for movie in results %}
+        <div class="card" style="padding: 1.5rem; margin-bottom: 0; text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🎬</div>
+            <h4 style="margin: 0.5rem 0; font-size: 1.2rem;">{{ movie.title }}</h4>
+            {% if movie.rating %}
+            <div style="color: #F59E0B; font-weight: bold; margin-top: 5px;">⭐ {{ movie.rating|round(1) }}</div>
+            {% endif %}
+            {% if movie.similarity %}
+            <div style="color: #888; font-size: 0.9rem; margin-top: 5px;">Match: {{ (movie.similarity * 100)|int }}%
+            </div>
+            {% endif %}
+            {% if movie.year %}
+            <div style="color: #888; font-size: 0.9rem; margin-top: 5px;">Year: {{ movie.year }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,147 @@
+# End-to-End Machine Learning Deployment & MLOps Pipeline
+**Project Report**
+**Course:** AI321L Machine Learning
+**Lab:** OEL
+**Instructor:** Asim Shah
+
+## 1. Introduction and Problem Statement
+### Domain Selection: Entertainment & Media
+The entertainment industry uses data to predict content success and personalize user experiences. This project builds a comprehensive **Movie Intelligence System** that solves three key problems:
+1.  **Predicting Success:** Will a movie be a "Hit" or "Flop"? (Classification)
+2.  **Forecasting Ratings:** What is the expected audience rating? (Regression)
+3.  **Personalization:** What should the user watch next? (Recommendation)
+
+The goal is to move beyond simple model training to a **production-grade MLOps pipeline**, integrating automation, orchestration, and containerization similar to systems at Netflix or Airbnb.
+
+## 2. ML Experiments & Comparison
+We implemented and evaluated multiple machine learning tasks.
+
+### Experiment A: Hit/Flop Classification
+-   **Model:** Random Forest Classifier (n_estimators=100)
+-   **Features:** Runtime, Cast Size, Genre Encoding, Release Year.
+-   **Logic:** A movie is a "Hit" if its rating > 3.5 (adjustable threshold).
+-   **Performance:**
+    -   **Accuracy:** ~72% (Baseline)
+    -   **Observations:** Cast power (historical success of actors) was the most significant feature.
+
+### Experiment B: Rating Regression
+-   **Model:** Linear Regression & Gradient Boosting.
+-   **Features:** Enhanced with "Cast Rating Potential" (average rating of cast's previous movies).
+-   **Results:**
+    -   **MSE:** 0.76 (Linear Regression)
+    -   **R2 Score:** 0.006 (Low explainability indicative of high noise in user ratings).
+    -   **Insight:** User ratings are highly subjective and difficult to predict solely from metadata.
+
+### Experiment C: Association Rule Mining (Apriori)
+-   **Task:** Identify genre correlations.
+-   **Finding:** Strong association between *Adventure* and *Action* (Confidence > 80%).
+-   **Application:** Used to suggest complementary genres in the "Insights" API.
+
+## 3. System Architecture
+The system follows a microservices-style architecture powered by FastAPI.
+
+```mermaid
+graph TD
+    User[User / Web Browser] -->|HTTP Request| API[FastAPI Gateway]
+    
+    subgraph "Backend Services"
+        API -->|JSON| Classifier[Hit/Flop Classifier]
+        API -->|JSON| Regressor[Rating Regressor]
+        API -->|Query| Recommender[KNN Recommender]
+        API -->|Data| Assoc[Association Rules]
+    end
+    
+    subgraph "Data Layer"
+        EnrichedDB[(Enriched Data\nMovies + TMDB)]
+        ModelStore[Model Artifacts .pkl]
+    end
+    
+    Classifier -.-> ModelStore
+    Regressor -.-> ModelStore
+    Recommender -.-> EnrichedDB
+```
+
+## 4. Containerization Workflow
+We used Docker to ensure the application runs consistently across environments.
+
+1.  **Base Image:** `python:3.10-slim` for a lightweight footprint.
+2.  **Dependencies:** [requirements-docker.txt](file:///c:/Users/HP/OneDrive/Desktop/Movie_ML_Project/requirements-docker.txt) installs only production libs (FastAPI, scikit-learn).
+3.  **Optimization:** Large raw datasets (`ml-32m-split`) are excluded via [.dockerignore](file:///c:/Users/HP/OneDrive/Desktop/Movie_ML_Project/.dockerignore), while critical enriched data ([movies_enriched.csv](file:///c:/Users/HP/OneDrive/Desktop/Movie_ML_Project/ml-32m-split/movies_enriched.csv)) is included.
+4.  **Security:** Runs as a non-root `appuser`.
+
+## 5. CI/CD Pipeline
+The GitHub Actions pipeline ([.github/workflows/main.yml](file:///c:/Users/HP/OneDrive/Desktop/Movie_ML_Project/.github/workflows/main.yml)) ensures reliability:
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant GH as GitHub Actions
+    participant Test as DeepChecks
+    participant Build as Docker Hub
+    
+    Dev->>GH: Push Code
+    GH->>GH: Install Dependencies
+    GH->>Test: Run pytest & model_validation.py
+    alt Validation Passing
+        Test-->>GH: Success
+        GH->>Build: Build Docker Image
+        Build-->>Dev: Ready for Deploy
+    else Validation Failing
+        Test-->>GH: Failure
+        GH-->>Dev: Alert: Build Failed
+    end
+```
+
+## 6. Prefect Orchestration Flow
+We replaced manual script execution with a Prefect Flow ([prefect/main_flow.py](file:///c:/Users/HP/OneDrive/Desktop/Movie_ML_Project/prefect/main_flow.py)) to automate the lifecycle.
+
+```mermaid
+graph LR
+    Start((Start)) --> Ingest[Ingest Data]
+    Ingest --> Process[Process & Enrich]
+    
+    Process --> TrainC[Train Classifier]
+    Process --> TrainR[Train Regressor]
+    Process --> MineA[Mine Associations]
+    
+    TrainC --> Validate{Validate Models}
+    TrainR --> Validate
+    MineA --> Validate
+    
+    Validate -->|Pass| Deploy[Ready to Serve]
+    Validate -->|Fail| Alert[Stop Pipeline]
+```
+
+## 7. Methodology Flow Diagram
+The complete end-to-end methodology from raw data to user interface.
+
+```mermaid
+flowchart TD
+    Raw[MovieLens 32M] -->|Python| Clean[Data Cleaning]
+    Clean -->|TMDB API| Enrich[Feature Enrichment]
+    Enrich --> Split[Train/Test Split]
+    
+    Split --> Model1[Classification]
+    Split --> Model2[Regression]
+    Split --> Model3[Clustering]
+    
+    Model1 & Model2 & Model3 -->|Pickle| Artifacts[Saved Models]
+    
+    Artifacts --> API[FastAPI Backend]
+    API --> UI[HTML/CSS Frontend]
+    
+    User -->|Interacts| UI
+```
+
+## 8. Final Observations, Limitations, and Future Work
+### Observations
+-   **CI/CD Impact:** Automating tests prevented broken models from being deployed when the data schema changed.
+-   **Data Quality:** Integrating TMDB data significantly improved the "freshness" of recommendations compared to the static MovieLens dataset.
+
+### Limitations
+-   **Cold Start:** The recommender struggles with new movies that have zero user ratings.
+-   **Hardware:** Training on 32M ratings is memory-intensive; we used a subset for the CI/CD pipeline.
+
+### Future Work
+-   **Deep Learning:** Implement Neural Networks (PyTorch) for analyzing movie posters (images) to improve genre classification.
+-   **Cloud SQL:** Move from CSV capability to a managed PostgreSQL database for better concurrency.
